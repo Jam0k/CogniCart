@@ -3,25 +3,31 @@ import requests
 
 app = Flask(__name__)
 
+# List of Raspberry Pi device URLs
+raspberry_pis = [
+    "http://localhost:5001/api/status",
+    "http://localhost:5002/api/status",
+    "http://localhost:5003/api/status",
+]
+
 @app.route('/')
 def dashboard():
     return render_template('dashboard.html')
 
-@app.route('/api/send', methods=['POST'])
-def send_command():
-    command = request.get_json().get('command')
-    
-    # URL of the Raspberry Pi endpoint that will receive the command
-    raspberry_pi_url = "http://localhost:5001/receive"
-    
-    # Forwarding the command to the Raspberry Pi
-    response = requests.post(raspberry_pi_url, json={"command": command})
-    
-    # Check if the request was successful
-    if response.status_code == 200:
-        return jsonify({"message": "Command sent to Raspberry Pi", "pi_response": response.json()})
-    else:
-        return jsonify({"message": "Failed to send command to Raspberry Pi", "pi_response": response.json()}), 500
+@app.route('/api/status', methods=['GET'])
+def check_status():
+    statuses = {}
+    for pi_url in raspberry_pis:
+        pi_name = pi_url.split("//")[1]  # Extracting a name based on the URL
+        try:
+            response = requests.get(pi_url, timeout=5)
+            if response.status_code == 200:
+                statuses[pi_name] = "Online"
+            else:
+                statuses[pi_name] = "Offline"
+        except requests.exceptions.RequestException:
+            statuses[pi_name] = "Offline"
+    return jsonify(statuses)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

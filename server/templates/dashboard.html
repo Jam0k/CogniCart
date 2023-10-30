@@ -2,39 +2,47 @@
 <html>
 <head>
     <title>Dashboard</title>
+    <!-- Adding Bootstrap CSS -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        function sendCommand() {
-            var command = document.getElementById("command").value;
-
-            $.ajax({
-                url: '/api/send',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ "command": command }),
-                success: function(response) {
-                    document.getElementById("message").innerText = response.message;
-                    document.getElementById("pi_response").innerText = JSON.stringify(response.pi_response);
-                },
-                error: function(xhr, status, error) {
-                    document.getElementById("message").innerText = "Failed to send command";
-                    document.getElementById("pi_response").innerText = "";
-                }
-            });
-        }
-    </script>
+    <!-- Adding Bootstrap JS and Popper.js for Bootstrap components that require them -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </head>
 <body>
 
-<h1>Raspberry Pi Command Dashboard</h1>
+<div class="container">
+    <h1 class="my-4">CogniCart Kiosk Dashboard</h1>
+    
+    <div class="mb-3">
+        <button onclick="checkStatus()" class="btn btn-primary">Fetch Status</button>
+    </div>
+    
+    <h3>Client Status:</h3>
+    <div id="status" class="mb-3"></div>
+</div>
 
-<label for="command">Enter Command:</label>
-<input type="text" id="command" name="command">
-<button onclick="sendCommand()">Send Command</button>
-
-<h2 id="message"></h2>
-<h3>Response from Raspberry Pi:</h3>
-<p id="pi_response"></p>
+<script>
+    function checkStatus() {
+        $.ajax({
+            url: '/api/status',
+            type: 'GET',
+            success: function(response) {
+                var statusDiv = document.getElementById("status");
+                statusDiv.innerHTML = "";
+                var clientCount = 1;
+                for (var pi in response) {
+                    var statusClass = response[pi] === "Online" ? "text-success" : "text-danger";
+                    statusDiv.innerHTML += `<p class="${statusClass}">Client ${clientCount}: ${response[pi]}</p>`;
+                    clientCount++;
+                }
+            },
+            error: function(xhr, status, error) {
+                document.getElementById("status").innerText = "Failed to get status";
+            }
+        });
+    }
+</script>
 
 </body>
 </html>
