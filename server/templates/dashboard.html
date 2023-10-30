@@ -1,47 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <!-- Adding Bootstrap CSS -->
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Adding Bootstrap JS and Popper.js for Bootstrap components that require them -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        .client-data {
+            margin-bottom: 20px;
+        }
+
+        #loadingSpinner {
+            display: none;
+        }
+    </style>
 </head>
 <body>
 
 <div class="container">
-    <h1 class="my-4">CogniCart Kiosk Dashboard</h1>
-    
-    <div class="mb-3">
-        <button onclick="checkStatus()" class="btn btn-primary">Fetch Status</button>
+    <div class="text-center my-4">
+        <img src="../static/logo.png" width="250">
+        <h1>CogniCart Kiosk Dashboard</h1>
     </div>
     
-    <h3>Client Status:</h3>
-    <div id="status" class="mb-3"></div>
+    <div class="d-flex justify-content-center">
+        <button onclick="checkHealth()" class="btn btn-primary">Check Health</button>
+    </div>
+    
+    <div id="loadingSpinner" class="text-center my-3">
+        <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    
+    <div id="timestamp" class="text-muted text-center my-2"></div>
+    
+    <div id="health" class="mt-4"></div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    function checkStatus() {
-        $.ajax({
-            url: '/api/status',
-            type: 'GET',
-            success: function(response) {
-                var statusDiv = document.getElementById("status");
-                statusDiv.innerHTML = "";
-                var clientCount = 1;
-                for (var pi in response) {
-                    var statusClass = response[pi] === "Online" ? "text-success" : "text-danger";
-                    statusDiv.innerHTML += `<p class="${statusClass}">Client ${clientCount}: ${response[pi]}</p>`;
-                    clientCount++;
-                }
-            },
-            error: function(xhr, status, error) {
-                document.getElementById("status").innerText = "Failed to get status";
+function checkHealth() {
+    $('#loadingSpinner').show();
+    $.ajax({
+        url: '/api/health',
+        type: 'GET',
+        success: function(response) {
+            $('#loadingSpinner').hide();
+            var now = new Date();
+            document.getElementById("timestamp").innerText = `Last checked: ${now.toLocaleString()}`;
+
+            var healthDiv = document.getElementById("health");
+            healthDiv.innerHTML = "";
+            for (var client in response) {
+                var clientData = response[client];
+                healthDiv.innerHTML += `
+                <div class="client-data">
+                    <h4>${client}</h4>
+                    <p><strong>Status:</strong> <span class="${clientData.status === 'Online' ? 'text-success' : 'text-danger'}">${clientData.status}</span></p>
+                    <p><strong>CPU Usage:</strong> ${clientData.cpu_usage}</p>
+                    <p><strong>Memory Usage:</strong> ${clientData.memory_usage}</p>
+                    <p><strong>Disk Usage:</strong> ${clientData.disk_usage}</p>
+                </div>`;
             }
-        });
-    }
+        },
+        error: function(xhr, status, error) {
+            $('#loadingSpinner').hide();
+            document.getElementById("health").innerHTML = "<div class='alert alert-danger'>Failed to get health status</div>";
+        }
+    });
+}
 </script>
 
 </body>

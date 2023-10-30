@@ -1,33 +1,30 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, jsonify, render_template
 import requests
 
 app = Flask(__name__)
 
-# List of Raspberry Pi device URLs
 raspberry_pis = [
-    "http://localhost:5001/api/status",
-    "http://localhost:5002/api/status",
-    "http://localhost:5003/api/status",
+    "http://localhost:5001",
+    "http://localhost:5002",
+    "http://localhost:5003",
 ]
 
 @app.route('/')
 def dashboard():
     return render_template('dashboard.html')
 
-@app.route('/api/status', methods=['GET'])
-def check_status():
-    statuses = {}
-    for pi_url in raspberry_pis:
-        pi_name = pi_url.split("//")[1]  # Extracting a name based on the URL
+@app.route('/api/health', methods=['GET'])
+def get_health():
+    health_data = {}
+    
+    for i, pi_url in enumerate(raspberry_pis, start=1):
         try:
-            response = requests.get(pi_url, timeout=5)
-            if response.status_code == 200:
-                statuses[pi_name] = "Online"
-            else:
-                statuses[pi_name] = "Offline"
+            response = requests.get(f"{pi_url}/api/health", timeout=5)
+            health_data[f"Client {i}"] = response.json()
         except requests.exceptions.RequestException:
-            statuses[pi_name] = "Offline"
-    return jsonify(statuses)
+            health_data[f"Client {i}"] = {"status": "Offline"}
+    
+    return jsonify(health_data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
