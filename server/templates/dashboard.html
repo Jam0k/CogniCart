@@ -115,7 +115,32 @@
         $('#loadingSpinner').hide();
         document.getElementById("output").innerHTML = "<div class='alert alert-danger'>Failed to get data</div>";
     }
+
+
+
+    function ntpCheck() {
+    $('#loadingSpinner').show();
+    
+    var selectedDevice = document.getElementById("deviceDropdown").value;
+    $.ajax({
+        url: '/api/ntp_check/' + selectedDevice,
+        type: 'GET',
+        success: function(response) {
+            $('#loadingSpinner').hide();
+            var outputDiv = document.getElementById("output");
+            outputDiv.innerHTML = `
+            <h4>NTP Check for Device ${response.client_id}</h4>
+            <p><strong>Status:</strong> <span class="${response.status === 'Online' ? 'text-success' : 'text-danger'}">${response.status}</span></p>
+            <p><strong>Current NTP Time:</strong> ${response.current_ntp_time}</p>`;
+        },
+        error: displayError
+    });
+}
+
     </script>
+
+
+
 
 </body>
 </html>

@@ -45,6 +45,23 @@ def get_network_settings(device_id):
     
     return jsonify(network_data)
 
+@app.route('/api/ntp_check/<int:device_id>', methods=['GET'])
+def ntp_check(device_id):
+    try:
+        # Ensure the device_id is valid
+        if 0 < device_id <= len(raspberry_pis):
+            pi_url = raspberry_pis[device_id-1]
+            response = requests.get(f"{pi_url}/api/ntp_check", timeout=5)
+            ntp_data = response.json()
+            ntp_data['client_id'] = f"Client {device_id}"
+        else:
+            ntp_data = {"error": "Invalid device_id"}
+    except requests.exceptions.RequestException:
+        ntp_data = {"client_id": f"Client {device_id}", "status": "Offline"}
+    
+    return jsonify(ntp_data)
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

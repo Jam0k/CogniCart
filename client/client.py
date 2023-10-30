@@ -2,6 +2,8 @@ from flask import Flask, jsonify
 import psutil
 import socket
 import subprocess
+from datetime import datetime
+import ntplib
 
 app = Flask(__name__)
 
@@ -52,6 +54,14 @@ def network_settings():
     except Exception as e:
         return jsonify({"status": f"Error fetching network data: {str(e)}"})
 
+@app.route('/api/ntp_check', methods=['GET'])
+def ntp_check_client():
+    try:
+        # Assuming the client's system time is synchronized with NTP
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        return jsonify({"status": "Online", "current_ntp_time": current_time})
+    except Exception as e:
+        return jsonify({"status": "Error fetching system time", "error": str(e)})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
