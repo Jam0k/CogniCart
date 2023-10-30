@@ -3,9 +3,14 @@ import psutil
 import socket
 import subprocess
 from datetime import datetime
-import ntplib
 
 app = Flask(__name__)
+
+def fetch_data_from_system(command, error_message="N/A"):
+    try:
+        return subprocess.check_output(command).strip().decode()
+    except:
+        return error_message
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -26,30 +31,17 @@ def health_check():
 @app.route('/api/network_settings', methods=['GET'])
 def network_settings():
     try:
-        # Getting hostname
         hostname = socket.gethostname()
-
-        # Getting IP Address
         ip_address = socket.gethostbyname(hostname)
-
-        # Getting MAC Address (You might need to adjust 'eth0' based on your device)
-        try:
-            mac_address = ':'.join(['{:02x}'.format((ord(c))) for c in open('/sys/class/net/eth0/address').read()])
-        except:
-            mac_address = "N/A"
-
-        # Getting WiFi SSID
-        try:
-            ssid = subprocess.check_output(["iwgetid", "-r"]).strip().decode()
-        except:
-            ssid = "N/A"
+        mac_address = fetch_data_from_system(["cat", "/sys/class/net/eth0/address"])
+        wifi_ssid = fetch_data_from_system(["iwgetid", "-r"])
 
         return jsonify({
             "status": "Online",
             "hostname": hostname,
             "ip_address": ip_address,
             "mac_address": mac_address,
-            "wifi_ssid": ssid
+            "wifi_ssid": wifi_ssid
         })
     except Exception as e:
         return jsonify({"status": f"Error fetching network data: {str(e)}"})
@@ -57,7 +49,6 @@ def network_settings():
 @app.route('/api/ntp_check', methods=['GET'])
 def ntp_check_client():
     try:
-        # Assuming the client's system time is synchronized with NTP
         current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         return jsonify({"status": "Online", "current_ntp_time": current_time})
     except Exception as e:

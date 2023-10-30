@@ -3,6 +3,7 @@ import requests
 
 app = Flask(__name__)
 
+# A list containing the URLs of the Raspberry Pi devices
 raspberry_pis = [
     "http://localhost:5001",
     "http://localhost:5002",
@@ -11,57 +12,38 @@ raspberry_pis = [
 
 @app.route('/')
 def dashboard():
+    # Render the dashboard page
     return render_template('dashboard.html')
+
+# Function to fetch data from Raspberry Pis. Abstracting this into a separate function avoids code repetition.
+def fetch_from_pi(device_id, endpoint):
+    try:
+        # Validate device_id
+        if 0 < device_id <= len(raspberry_pis):
+            pi_url = raspberry_pis[device_id-1]
+            response = requests.get(f"{pi_url}/api/{endpoint}", timeout=5)
+            data = response.json()
+            data['client_id'] = f"Client {device_id}"
+        else:
+            data = {"error": "Invalid device_id"}
+    except requests.exceptions.RequestException:
+        data = {"client_id": f"Client {device_id}", "status": "Offline"}
+    return jsonify(data)
 
 @app.route('/api/health/<int:device_id>', methods=['GET'])
 def get_health(device_id):
-    try:
-        # Ensure the device_id is valid
-        if 0 < device_id <= len(raspberry_pis):
-            pi_url = raspberry_pis[device_id-1]
-            response = requests.get(f"{pi_url}/api/health", timeout=5)
-            health_data = response.json()
-            health_data['client_id'] = f"Client {device_id}"
-        else:
-            health_data = {"error": "Invalid device_id"}
-    except requests.exceptions.RequestException:
-        health_data = {"client_id": f"Client {device_id}", "status": "Offline"}
-    
-    return jsonify(health_data)
+    # Fetch health data from the Raspberry Pi
+    return fetch_from_pi(device_id, 'health')
 
 @app.route('/api/network_settings/<int:device_id>', methods=['GET'])
 def get_network_settings(device_id):
-    try:
-        # Ensure the device_id is valid
-        if 0 < device_id <= len(raspberry_pis):
-            pi_url = raspberry_pis[device_id-1]
-            response = requests.get(f"{pi_url}/api/network_settings", timeout=5)
-            network_data = response.json()
-            network_data['client_id'] = f"Client {device_id}"
-        else:
-            network_data = {"error": "Invalid device_id"}
-    except requests.exceptions.RequestException:
-        network_data = {"client_id": f"Client {device_id}", "status": "Offline"}
-    
-    return jsonify(network_data)
+    # Fetch network settings from the Raspberry Pi
+    return fetch_from_pi(device_id, 'network_settings')
 
 @app.route('/api/ntp_check/<int:device_id>', methods=['GET'])
 def ntp_check(device_id):
-    try:
-        # Ensure the device_id is valid
-        if 0 < device_id <= len(raspberry_pis):
-            pi_url = raspberry_pis[device_id-1]
-            response = requests.get(f"{pi_url}/api/ntp_check", timeout=5)
-            ntp_data = response.json()
-            ntp_data['client_id'] = f"Client {device_id}"
-        else:
-            ntp_data = {"error": "Invalid device_id"}
-    except requests.exceptions.RequestException:
-        ntp_data = {"client_id": f"Client {device_id}", "status": "Offline"}
-    
-    return jsonify(ntp_data)
-
-
+    # Fetch NTP check data from the Raspberry Pi
+    return fetch_from_pi(device_id, 'ntp_check')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

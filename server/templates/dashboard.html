@@ -1,146 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard</title>
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <style>
-        .client-data {
-            margin-bottom: 20px;
-        }
-
-        #loadingSpinner {
-            display: none;
-        }
+      .card {
+        margin-bottom: 20px;
+      }
     </style>
-</head>
-<body>
+  </head>
 
-<div class="container">
-    <div class="text-center my-4">
-        <img src="../static/logo.png" width="250">
+  <body>
+    <div class="container mt-4">
+      <div class="text-center mb-4">
+        <img src="../static/logo.png" width="250" />
         <h1>CogniCart Kiosk Dashboard</h1>
-    </div>
-    
-    <div class="d-flex justify-content-center mb-3">
+      </div>
+
+      <div class="d-flex justify-content-center mb-3">
         <label for="deviceDropdown" class="mr-2">Select Device</label>
         <select id="deviceDropdown" class="form-control w-auto">
-            <option value="1">Device 1</option>
-            <option value="2">Device 2</option>
-            <option value="3">Device 3</option>
-            <!-- Add more options based on your devices -->
+          <option value="1">Device 1</option>
+          <option value="2">Device 2</option>
+          <option value="3">Device 3</option>
         </select>
-    </div>
-    
-    <div class="text-center mb-3">
-        <button onclick="checkHealth()" class="btn btn-primary">Check Health</button>
-        <button onclick="networkSettings()" class="btn btn-secondary">Network Settings</button>
-        <button onclick="ntpCheck()" class="btn btn-secondary">NTP Check</button>
-        <button onclick="cameraStatus()" class="btn btn-secondary">Camera Status</button>
-        <button onclick="captureImageStreamSingle()" class="btn btn-secondary">Capture Image Stream (Single)</button>
-        <button onclick="captureImageStream10s()" class="btn btn-secondary">Capture Image Stream (10s)</button>
-    </div>
-    
-    <div id="loadingSpinner" class="text-center my-3">
+      </div>
+
+      <div class="text-center mb-3">
+        <button onclick="checkHealth()" class="btn btn-primary">
+          Check Health
+        </button>
+        <button onclick="networkSettings()" class="btn btn-primary">
+          Network Settings
+        </button>
+        <button onclick="ntpCheck()" class="btn btn-primary">NTP Check</button>
+      </div>
+
+      <div id="loadingSpinner" class="text-center my-3">
         <div class="spinner-border" role="status">
-            <span class="sr-only">Loading...</span>
+          <span class="sr-only">Loading...</span>
         </div>
+      </div>
+
+      <div id="timestamp" class="text-muted text-center my-2"></div>
+
+      <div id="output" class="mt-4"></div>
     </div>
-    
-    <div id="timestamp" class="text-muted text-center my-2"></div>
-    
-    <div id="health" class="mt-4"></div>
 
-    <div id="output" class="mt-4"></div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="../static/js/checkHealth.js"></script>
+    <script src="../static/js/displayError.js"></script>
+    <script src="../static/js/displayError.js"></script>
+    <script src="../static/js/networkSettings.js"></script>
+    <script src="../static/js/ntpCheck.js"></script>
+    <script src="../static/js/updateTimestamp.js"></script>
 
-</div>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    function checkHealth() {
-        $('#loadingSpinner').show();
-        
-        var selectedDevice = document.getElementById("deviceDropdown").value;
-        $.ajax({
-            url: '/api/health/' + selectedDevice,
-            type: 'GET',
-            success: displayHealthData,
-            error: displayError
-        });
-    }
-    
-    function networkSettings() {
-        $('#loadingSpinner').show();
-        
-        var selectedDevice = document.getElementById("deviceDropdown").value;
-        $.ajax({
-            url: '/api/network_settings/' + selectedDevice,
-            type: 'GET',
-            success: displayNetworkData,
-            error: displayError
-        });
-    }
-    
-    // Function to display health data
-    function displayHealthData(response) {
-        $('#loadingSpinner').hide();
-        var now = new Date();
-        document.getElementById("timestamp").innerText = `Last checked: ${now.toLocaleString()}`;
-    
-        var outputDiv = document.getElementById("output");
-        outputDiv.innerHTML = `
-        <h4>Device ${response.client_id}</h4>
-        <p><strong>Status:</strong> <span class="${response.status === 'Online' ? 'text-success' : 'text-danger'}">${response.status}</span></p>
-        <p><strong>CPU Usage:</strong> ${response.cpu_usage}</p>
-        <p><strong>Memory Usage:</strong> ${response.memory_usage}</p>
-        <p><strong>Disk Usage:</strong> ${response.disk_usage}</p>`;
-    }
-    
-    // Function to display network data
-    function displayNetworkData(response) {
-        $('#loadingSpinner').hide();
-        var outputDiv = document.getElementById("output");
-        outputDiv.innerHTML = `
-        <h4>Network Settings for Device ${response.client_id}</h4>
-        <p><strong>Status:</strong> ${response.status}</p>
-        <p><strong>Hostname:</strong> ${response.hostname}</p>
-        <p><strong>IP Address:</strong> ${response.ip_address}</p>
-        <p><strong>MAC Address:</strong> ${response.mac_address}</p>
-        <p><strong>WiFi SSID:</strong> ${response.wifi_ssid}</p>`;
-    }
-    
-    // Function to display error
-    function displayError(xhr, status, error) {
-        $('#loadingSpinner').hide();
-        document.getElementById("output").innerHTML = "<div class='alert alert-danger'>Failed to get data</div>";
-    }
-
-
-
-    function ntpCheck() {
-    $('#loadingSpinner').show();
-    
-    var selectedDevice = document.getElementById("deviceDropdown").value;
-    $.ajax({
-        url: '/api/ntp_check/' + selectedDevice,
-        type: 'GET',
-        success: function(response) {
-            $('#loadingSpinner').hide();
-            var outputDiv = document.getElementById("output");
-            outputDiv.innerHTML = `
-            <h4>NTP Check for Device ${response.client_id}</h4>
-            <p><strong>Status:</strong> <span class="${response.status === 'Online' ? 'text-success' : 'text-danger'}">${response.status}</span></p>
-            <p><strong>Current NTP Time:</strong> ${response.current_ntp_time}</p>`;
-        },
-        error: displayError
-    });
-}
-
-    </script>
-
-
-
-
-</body>
+  </body>
 </html>
