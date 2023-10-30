@@ -13,18 +13,38 @@ raspberry_pis = [
 def dashboard():
     return render_template('dashboard.html')
 
-@app.route('/api/health', methods=['GET'])
-def get_health():
-    health_data = {}
-    
-    for i, pi_url in enumerate(raspberry_pis, start=1):
-        try:
+@app.route('/api/health/<int:device_id>', methods=['GET'])
+def get_health(device_id):
+    try:
+        # Ensure the device_id is valid
+        if 0 < device_id <= len(raspberry_pis):
+            pi_url = raspberry_pis[device_id-1]
             response = requests.get(f"{pi_url}/api/health", timeout=5)
-            health_data[f"Client {i}"] = response.json()
-        except requests.exceptions.RequestException:
-            health_data[f"Client {i}"] = {"status": "Offline"}
+            health_data = response.json()
+            health_data['client_id'] = f"Client {device_id}"
+        else:
+            health_data = {"error": "Invalid device_id"}
+    except requests.exceptions.RequestException:
+        health_data = {"client_id": f"Client {device_id}", "status": "Offline"}
     
     return jsonify(health_data)
+
+@app.route('/api/network_settings/<int:device_id>', methods=['GET'])
+def get_network_settings(device_id):
+    try:
+        # Ensure the device_id is valid
+        if 0 < device_id <= len(raspberry_pis):
+            pi_url = raspberry_pis[device_id-1]
+            response = requests.get(f"{pi_url}/api/network_settings", timeout=5)
+            network_data = response.json()
+            network_data['client_id'] = f"Client {device_id}"
+        else:
+            network_data = {"error": "Invalid device_id"}
+    except requests.exceptions.RequestException:
+        network_data = {"client_id": f"Client {device_id}", "status": "Offline"}
+    
+    return jsonify(network_data)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

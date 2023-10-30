@@ -23,8 +23,23 @@
         <h1>CogniCart Kiosk Dashboard</h1>
     </div>
     
-    <div class="d-flex justify-content-center">
+    <div class="d-flex justify-content-center mb-3">
+        <label for="deviceDropdown" class="mr-2">Select Device</label>
+        <select id="deviceDropdown" class="form-control w-auto">
+            <option value="1">Device 1</option>
+            <option value="2">Device 2</option>
+            <option value="3">Device 3</option>
+            <!-- Add more options based on your devices -->
+        </select>
+    </div>
+    
+    <div class="text-center mb-3">
         <button onclick="checkHealth()" class="btn btn-primary">Check Health</button>
+        <button onclick="networkSettings()" class="btn btn-secondary">Network Settings</button>
+        <button onclick="ntpCheck()" class="btn btn-secondary">NTP Check</button>
+        <button onclick="cameraStatus()" class="btn btn-secondary">Camera Status</button>
+        <button onclick="captureImageStreamSingle()" class="btn btn-secondary">Capture Image Stream (Single)</button>
+        <button onclick="captureImageStream10s()" class="btn btn-secondary">Capture Image Stream (10s)</button>
     </div>
     
     <div id="loadingSpinner" class="text-center my-3">
@@ -36,41 +51,71 @@
     <div id="timestamp" class="text-muted text-center my-2"></div>
     
     <div id="health" class="mt-4"></div>
+
+    <div id="output" class="mt-4"></div>
+
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-function checkHealth() {
-    $('#loadingSpinner').show();
-    $.ajax({
-        url: '/api/health',
-        type: 'GET',
-        success: function(response) {
-            $('#loadingSpinner').hide();
-            var now = new Date();
-            document.getElementById("timestamp").innerText = `Last checked: ${now.toLocaleString()}`;
-
-            var healthDiv = document.getElementById("health");
-            healthDiv.innerHTML = "";
-            for (var client in response) {
-                var clientData = response[client];
-                healthDiv.innerHTML += `
-                <div class="client-data">
-                    <h4>${client}</h4>
-                    <p><strong>Status:</strong> <span class="${clientData.status === 'Online' ? 'text-success' : 'text-danger'}">${clientData.status}</span></p>
-                    <p><strong>CPU Usage:</strong> ${clientData.cpu_usage}</p>
-                    <p><strong>Memory Usage:</strong> ${clientData.memory_usage}</p>
-                    <p><strong>Disk Usage:</strong> ${clientData.disk_usage}</p>
-                </div>`;
-            }
-        },
-        error: function(xhr, status, error) {
-            $('#loadingSpinner').hide();
-            document.getElementById("health").innerHTML = "<div class='alert alert-danger'>Failed to get health status</div>";
-        }
-    });
-}
-</script>
+    function checkHealth() {
+        $('#loadingSpinner').show();
+        
+        var selectedDevice = document.getElementById("deviceDropdown").value;
+        $.ajax({
+            url: '/api/health/' + selectedDevice,
+            type: 'GET',
+            success: displayHealthData,
+            error: displayError
+        });
+    }
+    
+    function networkSettings() {
+        $('#loadingSpinner').show();
+        
+        var selectedDevice = document.getElementById("deviceDropdown").value;
+        $.ajax({
+            url: '/api/network_settings/' + selectedDevice,
+            type: 'GET',
+            success: displayNetworkData,
+            error: displayError
+        });
+    }
+    
+    // Function to display health data
+    function displayHealthData(response) {
+        $('#loadingSpinner').hide();
+        var now = new Date();
+        document.getElementById("timestamp").innerText = `Last checked: ${now.toLocaleString()}`;
+    
+        var outputDiv = document.getElementById("output");
+        outputDiv.innerHTML = `
+        <h4>Device ${response.client_id}</h4>
+        <p><strong>Status:</strong> <span class="${response.status === 'Online' ? 'text-success' : 'text-danger'}">${response.status}</span></p>
+        <p><strong>CPU Usage:</strong> ${response.cpu_usage}</p>
+        <p><strong>Memory Usage:</strong> ${response.memory_usage}</p>
+        <p><strong>Disk Usage:</strong> ${response.disk_usage}</p>`;
+    }
+    
+    // Function to display network data
+    function displayNetworkData(response) {
+        $('#loadingSpinner').hide();
+        var outputDiv = document.getElementById("output");
+        outputDiv.innerHTML = `
+        <h4>Network Settings for Device ${response.client_id}</h4>
+        <p><strong>Status:</strong> ${response.status}</p>
+        <p><strong>Hostname:</strong> ${response.hostname}</p>
+        <p><strong>IP Address:</strong> ${response.ip_address}</p>
+        <p><strong>MAC Address:</strong> ${response.mac_address}</p>
+        <p><strong>WiFi SSID:</strong> ${response.wifi_ssid}</p>`;
+    }
+    
+    // Function to display error
+    function displayError(xhr, status, error) {
+        $('#loadingSpinner').hide();
+        document.getElementById("output").innerHTML = "<div class='alert alert-danger'>Failed to get data</div>";
+    }
+    </script>
 
 </body>
 </html>

@@ -1,5 +1,7 @@
 from flask import Flask, jsonify
 import psutil
+import socket
+import subprocess
 
 app = Flask(__name__)
 
@@ -18,6 +20,38 @@ def health_check():
         })
     except Exception:
         return jsonify({"status": "Error fetching health data"})
+    
+@app.route('/api/network_settings', methods=['GET'])
+def network_settings():
+    try:
+        # Getting hostname
+        hostname = socket.gethostname()
+
+        # Getting IP Address
+        ip_address = socket.gethostbyname(hostname)
+
+        # Getting MAC Address (You might need to adjust 'eth0' based on your device)
+        try:
+            mac_address = ':'.join(['{:02x}'.format((ord(c))) for c in open('/sys/class/net/eth0/address').read()])
+        except:
+            mac_address = "N/A"
+
+        # Getting WiFi SSID
+        try:
+            ssid = subprocess.check_output(["iwgetid", "-r"]).strip().decode()
+        except:
+            ssid = "N/A"
+
+        return jsonify({
+            "status": "Online",
+            "hostname": hostname,
+            "ip_address": ip_address,
+            "mac_address": mac_address,
+            "wifi_ssid": ssid
+        })
+    except Exception as e:
+        return jsonify({"status": f"Error fetching network data: {str(e)}"})
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
