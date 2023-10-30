@@ -39,17 +39,23 @@
           Network Settings
         </button>
         <button onclick="ntpCheck()" class="btn btn-primary">NTP Check</button>
+        <button onclick="checkCamera()" class="btn btn-primary">Check Camera</button>
+        <button onclick="takePhoto()" class="btn btn-primary">Take Photo</button>
+
       </div>
 
-      <div id="loadingSpinner" class="text-center my-3">
+      <div id="loadingSpinner" class="text-center my-3" style="display: none;">
         <div class="spinner-border" role="status">
-          <span class="sr-only">Loading...</span>
+            <span class="sr-only">Loading...</span>
         </div>
-      </div>
-
+    </div>
+    
       <div id="timestamp" class="text-muted text-center my-2"></div>
 
       <div id="output" class="mt-4"></div>
+
+      <img id="photoDisplay" style="max-width: 100%; display: none;" />
+
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -59,6 +65,72 @@
     <script src="../static/js/networkSettings.js"></script>
     <script src="../static/js/ntpCheck.js"></script>
     <script src="../static/js/updateTimestamp.js"></script>
+
+    <script>
+function checkCamera() {
+    const deviceDropdown = document.getElementById('deviceDropdown');
+    const selectedDevice = deviceDropdown.value;
+    
+    $("#loadingSpinner").show(); // Show the spinner
+    
+    $.ajax({
+        url: `/api/camera_check/${selectedDevice}`,
+        type: 'GET',
+        success: function(response) {
+            // Hide the spinner
+            $("#loadingSpinner").hide();
+            
+            // Displaying the result on the webpage
+            document.getElementById('output').innerText = `Camera Status: ${response.camera_status}`;
+        },
+        error: function(error) {
+            // Hide the spinner
+            $("#loadingSpinner").hide();
+            
+            console.error(error);
+        }
+    });
+}
+
+      </script>
+
+<script>
+function takePhoto() {
+    const deviceDropdown = document.getElementById("deviceDropdown");
+    const deviceId = deviceDropdown.value;
+
+    $("#loadingSpinner").show(); // Show the spinner
+
+    fetch(`/api/take_photo/${deviceId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.statusText);
+            }
+            return response.blob(); // Convert the response data to a blob
+        })
+        .then(blob => {
+            // Hide the spinner
+            $("#loadingSpinner").hide();
+
+            const url = window.URL.createObjectURL(blob);
+            const image = document.getElementById("photoDisplay");
+            image.src = url;
+            image.onload = () => {
+                window.URL.revokeObjectURL(url); // Revoke the Blob URL once the image is loaded
+            };
+            image.style.display = "block"; // Display the image
+        })
+        .catch(error => {
+            // Hide the spinner
+            $("#loadingSpinner").hide();
+            
+            console.error("Error taking photo:", error);
+        });
+}
+
+
+
+  </script>
 
   </body>
 </html>

@@ -1,8 +1,9 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_file
 import psutil
 import socket
 import subprocess
 from datetime import datetime
+from io import BytesIO
 
 app = Flask(__name__)
 
@@ -53,6 +54,30 @@ def ntp_check_client():
         return jsonify({"status": "Online", "current_ntp_time": current_time})
     except Exception as e:
         return jsonify({"status": "Error fetching system time", "error": str(e)})
+    
+
+@app.route('/api/camera_check', methods=['GET'])
+def camera_check():
+    try:
+        # Using subprocess to execute a shell command that checks the camera status
+        camera_status = subprocess.check_output(["vcgencmd", "get_camera"]).strip().decode()
+        return jsonify({"status": "Online", "camera_status": camera_status})
+    except Exception as e:
+        return jsonify({"status": f"Error fetching camera data: {str(e)}"})
+    
+@app.route('/api/take_photo', methods=['GET'])
+def take_photo():
+    try:
+        # Using subprocess to execute the libcamera-still command
+        image_stream = BytesIO()
+        process = subprocess.Popen(["libcamera-still", "-o", "-"], stdout=subprocess.PIPE)
+        out, err = process.communicate()
+        image_stream.write(out)
+        image_stream.seek(0)
+        return send_file(image_stream, mimetype='image/jpeg', as_attachment=True, download_name='photo.jpg')
+    except Exception as e:
+        return jsonify({"status": f"Error capturing photo: {str(e)}"})
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
