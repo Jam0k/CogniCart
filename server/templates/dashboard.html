@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        function sendCommand() {
+            var command = document.getElementById("command").value;
+
+            $.ajax({
+                url: '/api/send',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ "command": command }),
+                success: function(response) {
+                    document.getElementById("message").innerText = response.message;
+                    document.getElementById("pi_response").innerText = JSON.stringify(response.pi_response);
+                },
+                error: function(xhr, status, error) {
+                    document.getElementById("message").innerText = "Failed to send command";
+                    document.getElementById("pi_response").innerText = "";
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+
+<h1>Raspberry Pi Command Dashboard</h1>
+
+<label for="command">Enter Command:</label>
+<input type="text" id="command" name="command">
+<button onclick="sendCommand()">Send Command</button>
+
+<h2 id="message"></h2>
+<h3>Response from Raspberry Pi:</h3>
+<p id="pi_response"></p>
+
+</body>
+</html>
