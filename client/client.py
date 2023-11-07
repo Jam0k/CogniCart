@@ -1,83 +1,90 @@
-from flask import Flask, jsonify, send_file
+import os
+import json
+import logging
+from logging.handlers import RotatingFileHandler
+from flask import Flask, jsonify
 import psutil
 import socket
-import subprocess
-from datetime import datetime
-from io import BytesIO
+from functools import wraps
 
 app = Flask(__name__)
 
-def fetch_data_from_system(command, error_message="N/A"):
-    try:
-        return subprocess.check_output(command).strip().decode()
-    except:
-        return error_message
+# Paths for the directories
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+CONFIG_DIR = os.path.join(BASE_DIR, 'config')
+LOG_FILE_PATH = os.path.join(LOG_DIR, 'app.log')
+CONFIG_FILE_PATH = os.path.join(CONFIG_DIR, 'config.json')
 
-@app.route('/api/health', methods=['GET'])
+# Make sure the 'logs' and 'config' directories exist
+os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(CONFIG_DIR, exist_ok=True)
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[RotatingFileHandler(LOG_FILE_PATH, maxBytes=10000, backupCount=3)]
+)
+logger = app.logger
+
+# Configuration caching
+_config = None
+
+def load_config():
+    global _config
+    if _config is None:
+        try:
+            with open(CONFIG_FILE_PATH, 'r') as config_file:
+                _config = json.load(config_file)
+                logger.info("Successfully loaded configuration file.")
+        except Exception as e:
+            logger.error(f"Failed to load configuration file: {e}")
+            _config = {}
+    return _config
+
+# Exception handling decorator
+def handle_exceptions(f):
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+            return jsonify({"error": "An internal error occurred"}), 500
+    return wrapped
+
+# HEALTH CHECK ENDPOINTS #
+@app.route('/api/health/system_status', methods=['GET'])
+@handle_exceptions
 def health_check():
-    try:
-        cpu_usage = psutil.cpu_percent(interval=1)
-        memory_info = psutil.virtual_memory()
-        disk_info = psutil.disk_usage('/')
-        
-        return jsonify({
-            "status": "Online",
-            "cpu_usage": f"{cpu_usage}%",
-            "memory_usage": f"{memory_info.percent}%",
-            "disk_usage": f"{disk_info.percent}%"
-        })
-    except Exception:
-        return jsonify({"status": "Error fetching health data"})
-    
-@app.route('/api/network_settings', methods=['GET'])
-def network_settings():
-    try:
-        hostname = socket.gethostname()
-        ip_address = socket.gethostbyname(hostname)
-        mac_address = fetch_data_from_system(["cat", "/sys/class/net/eth0/address"])
-        wifi_ssid = fetch_data_from_system(["iwgetid", "-r"])
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory = psutil.virtual_memory()
+    disk = psutil.disk_usage('/')
+    return jsonify({
+        "status": "Online",
+        "cpu_usage": f"{cpu_usage}%",
+        "memory_usage": f"{memory.percent}%",
+        "disk_usage": f"{disk.percent}%"
+    })
 
-        return jsonify({
-            "status": "Online",
-            "hostname": hostname,
-            "ip_address": ip_address,
-            "mac_address": mac_address,
-            "wifi_ssid": wifi_ssid
-        })
-    except Exception as e:
-        return jsonify({"status": f"Error fetching network data: {str(e)}"})
+@app.route('/api/health/network_status', methods=['GET'])
+@handle_exceptions
+def network_info():
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    return jsonify({
+        "status": "Online",
+        "hostname": hostname,
+        "ip_address": ip_address
+    })
 
-@app.route('/api/ntp_check', methods=['GET'])
-def ntp_check_client():
-    try:
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        return jsonify({"status": "Online", "current_ntp_time": current_time})
-    except Exception as e:
-        return jsonify({"status": "Error fetching system time", "error": str(e)})
-    
-
-@app.route('/api/camera_check', methods=['GET'])
-def camera_check():
-    try:
-        # Using subprocess to execute a shell command that checks the camera status
-        camera_status = subprocess.check_output(["vcgencmd", "get_camera"]).strip().decode()
-        return jsonify({"status": "Online", "camera_status": camera_status})
-    except Exception as e:
-        return jsonify({"status": f"Error fetching camera data: {str(e)}"})
-    
-@app.route('/api/take_photo', methods=['GET'])
-def take_photo():
-    try:
-        # Using subprocess to execute the libcamera-still command
-        image_stream = BytesIO()
-        process = subprocess.Popen(["libcamera-still", "-o", "-"], stdout=subprocess.PIPE)
-        out, err = process.communicate()
-        image_stream.write(out)
-        image_stream.seek(0)
-        return send_file(image_stream, mimetype='image/jpeg', as_attachment=True, download_name='photo.jpg')
-    except Exception as e:
-        return jsonify({"status": f"Error capturing photo: {str(e)}"})
-
+@app.route('/api/health/config_status', methods=['GET'])
+@handle_exceptions
+def get_config():
+    config_data = load_config()
+    return jsonify(config_data)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001)
+    app.run(host='0.0.0.0', port=5000)

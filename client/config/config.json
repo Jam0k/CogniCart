@@ -1,0 +1,9 @@
+{
+    "device_name": "rpi1",
+    "location": "front",
+    "other_settings": {
+      "setting1": "value1",
+      "setting2": "value2"
+    }
+  }
+  
